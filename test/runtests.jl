@@ -9,4 +9,4 @@ d = Dipole()
 
 eps = abs(0.01*hfield(d,p)[3])       # match within 1%
 
-@test_approx_eq_eps hfield(d,p)[3] hfield(s,p)[3] eps
+@test hfield(d,p)[3] ≈ hfield(s,p)[3] atol=eps
