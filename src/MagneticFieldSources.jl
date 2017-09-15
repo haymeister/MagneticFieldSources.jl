@@ -15,6 +15,11 @@ export Dipole,Solenoid,hfield,Vector3D,Point3D
 
 abstract type MagneticFieldSource end
 
+"""
+    Dipole{T<:AbstractFloat} <: MagneticFieldSource
+
+Magnetic dipole with 3D position and moment (orientation)
+"""
 struct Dipole{T<:AbstractFloat} <: MagneticFieldSource
     position::MVector{3,T}
     moment::MVector{3,T}
@@ -22,11 +27,21 @@ end
 Dipole() = Dipole(Vector3D(0.),Vector3D(0.,0.,1.))
 Dipole(position::Point3D) = Dipole(position,Vector3D(0.,0.,1.))
 
+"""
+    hfield(d::Dipole,p::Vector3D)
+
+The magnetic field from an ideal magnetic dipole
+"""
 function hfield(d::Dipole,p::Vector3D)
     r = p-d.position
     return (3r*dot(d.moment,r)/norm(r)^2 - d.moment)/(4π*norm(r)^3)
 end
 
+"""
+    Solenoid{T<:AbstractFloat} <: MagneticFieldSource
+
+A finite-length solenoid modeled as a cylindrical current sheet
+"""
 type Solenoid{T<:AbstractFloat} <: MagneticFieldSource
     position::MVector{3,T}
     moment::MVector{3,T}
@@ -37,6 +52,11 @@ end
 Solenoid(length::Number,radius::Number) = Solenoid(Point3D(0.,0.,0.),Vector3D(0.,0.,1.),length,radius)
 Solenoid(position::Point3D,length::Number,radius::Number) = Solenoid(position,Vector3D(0.,0.,1.),length,radius)
 
+"""
+    hfield(s::Solenoid,p::Point3D)
+
+The magnetic field from a current sheet. See [here](https://en.wikipedia.org/wiki/Solenoid#Finite_continuous_solenoid).
+"""
 function hfield(s::Solenoid,p::Point3D)
     NI = norm(s.moment)/(π*s.radius^2) # turn-current product
     r = p-s.position
@@ -61,19 +81,22 @@ function hfield(s::Solenoid,p::Point3D)
 end
 
 function intz(ρ,ζ,a)
-    hsq=4a*ρ/(a+ρ)^2
-    ksq = 4a*ρ/((a+ρ)^2 + ζ^2)
-    return ζ*sqrt(ksq)*(K(ksq) + ((a-ρ)/(a+ρ))Pi(hsq,π/2,ksq))
+    h²=4a*ρ/(a+ρ)^2
+    k² = 4a*ρ/((a+ρ)^2 + ζ^2)
+    return ζ*√k²*(K(k²) + ((a-ρ)/(a+ρ))Pi(h²,π/2,k²))
 end
 
 function intρ(ρ,ζ,a)
-    ksq = (4a*ρ)/((a+ρ)^2 + ζ^2)
-    return ((ksq-2)K(ksq) + 2E(ksq))/sqrt(ksq)
+    k² = (4a*ρ)/((a+ρ)^2 + ζ^2)
+    return ((k²-2)K(k²) + 2E(k²))/√k²
 end
 
+"""
+    quatfromeuler(φ,θ,ψ)
+Returns a quaternion based on the z-x-z Euler angles. See
+[here](https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Euler_angles_.E2.86.94_Quaternion)
+"""
 function quatfromeuler(φ,θ,ψ)
-    # Returns a quaternion based on the z-x-z Euler angles. See
-    # https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Euler_angles_.E2.86.94_Quaternion
     Quaternion(cos((φ+ψ)/2)*cos(θ/2),cos((φ-ψ)/2)*sin(θ/2),sin((φ-ψ)/2)*sin(θ/2),sin((φ+ψ)/2)*cos(θ/2))
 end
 
